@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import draw
 import converter
 
-IMAGE = 'https://securecdn.pymnts.com/wp-content/uploads/2017/08/Malls.jpg'
+IMAGE = 'https://hips.hearstapps.com/hmg-prod/images/2023-mclaren-artura-101-1655218102.jpg?crop=1.00xw:0.847xh;0,0.153xh&resize=1200:*'
 KEY = 'ddb26f4091604a8ab5a2872a82403846'
 
 def download(image_url):
@@ -54,14 +54,13 @@ def main():
         objects = root.objects
 
         with Image.open("./data/image.jpg") as im:
-
             draw = ImageDraw.Draw(im)
             draw.line((0, 0) + im.size, fill=128)
             draw.line((0, im.size[1], im.size[0], 0), fill=128)
 
             for i in objects:
-                shape = [(i.rectangle.x, i.rectangle.y), (i.rectangle.w, i.rectangle.h)]
-                draw.rectangle(shape, outline='red', width=10)
+                shape = [(i.rectangle.x, i.rectangle.y), (i.rectangle.x + i.rectangle.w, i.rectangle.y + i.rectangle.h)]
+                draw.rectangle(shape, outline='red', width=5)
                 draw.text((i.rectangle.x, i.rectangle.y), text=i.object, font=ImageFont.truetype('arial.ttf', 50))
 
             im.show()
