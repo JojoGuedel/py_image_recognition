@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import draw
 import converter
 
-IMAGE = 'https://hips.hearstapps.com/hmg-prod/images/2023-mclaren-artura-101-1655218102.jpg?crop=1.00xw:0.847xh;0,0.153xh&resize=1200:*'
+IMAGE = 'https://www.vmcdn.ca/f/files/victoriatimescolonist/json/2022/03/web1_vka-viewstreet-13264.jpg'
 KEY = 'ddb26f4091604a8ab5a2872a82403846'
 
 def download(image_url):
