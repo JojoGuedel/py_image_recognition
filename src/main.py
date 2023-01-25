@@ -1,71 +1,85 @@
-import http.client, urllib.request, urllib.parse, urllib.error, base64
-import json
-import requests
-import shutil
-from PIL import Image, ImageDraw, ImageFont
+import io
+import urllib.request
+import pygame
 
-import draw
-import converter
+import CPVAPI
+
+# from PIL import Image, ImageDraw, ImageFont
 
 IMAGE = 'https://www.vmcdn.ca/f/files/victoriatimescolonist/json/2022/03/web1_vka-viewstreet-13264.jpg'
-KEY = 'ddb26f4091604a8ab5a2872a82403846'
 
-def download(image_url):
-    r = requests.get(image_url, stream = True)
+# def download(image_url):
+#     r = requests.get(image_url, stream = True)
 
-    if r.status_code == 200:
-        # Set decode_content value to True, otherwise the downloaded image file's size will be zero.
-        r.raw.decode_content = True
+#     if r.status_code == 200:
+#         # Set decode_content value to True, otherwise the downloaded image file's size will be zero.
+#         r.raw.decode_content = True
         
-        # Open a local file with wb ( write binary ) permission.
-        with open('./data/image.jpg','wb') as f:
-            shutil.copyfileobj(r.raw, f)
+#         # Open a local file with wb ( write binary ) permission.
+#         with open('./data/image.jpg','wb') as f:
+#             shutil.copyfileobj(r.raw, f)
         
-        print('Image sucessfully downloaded')
-    else:
-        print('Image Couldn\'t be retreived')
+#         print('Image sucessfully downloaded')
+#     else:
+#         print('Image Couldn\'t be retreived')
+
+running = True
+
+def load_key():
+    with open('./data/key', 'r') as file:
+        return file.read()
+
+def load_image_file(image_url):
+    raw_data = urllib.request.urlopen(image_url).read()
+    return io.BytesIO(raw_data)
+
+def poll_events():
+    global running
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
 def main():
-    download(IMAGE)
+    response = CPVAPI.try_get(IMAGE, load_key())
+    if response is None:
+        print("")
+        return
+    
+    image = pygame.image.load(load_image_file(IMAGE))
+    
+    pygame.init()
+    canvas = pygame.display.set_mode(image.get_size(), pygame.DOUBLEBUF)
+    
+    s = pygame.Surface(image.get_size())
+    s.set_alpha(100)
+    
+    font = pygame.font.SysFont(None, 24)
+    
+    objects = response.objects
+    for object in objects:
+        print(f'{object.object} with {object.confidence} confidence.')
 
-    headers = {
-        # Request headers
-        'Content-Type': 'application/json',
-        'Ocp-Apim-Subscription-Key': KEY,
-    }
+    while running:
+        poll_events()
 
-    params = urllib.parse.urlencode({
-        # Request parameters
-        'visualFeatures': 'Objects',
-        # 'details': 'Landmarks',
-        'language': 'en',
-    })
+        mouse_pos = pygame.mouse.get_pos()
+        
+        canvas.fill((255, 255, 255))
+        canvas.blit(image, (0, 0))
 
-    body = '{"url": "%s"}' % IMAGE
+        for object in objects:
+            rect = pygame.Rect(object.rectangle.pos, object.rectangle.size)
+            if rect.collidepoint(mouse_pos):
+                text = font.render(f'Object: {object.object}', False, (255, 0, 0))
+                canvas.blit(text, (10, 10))
 
-    try:
-        conn = http.client.HTTPSConnection('westeurope.api.cognitive.microsoft.com')
-        conn.request("POST", f"/vision/v3.0/analyze?{params}", body, headers)
-        response = conn.getresponse()
-        data = response.read()
-        conn.close()
+            pygame.draw.rect(s, (255, 0 , 0), rect)
+        canvas.blit(s, (0, 0))
 
-        root = converter.Root.from_dict(json.loads(data))
-        objects = root.objects
+        pygame.display.flip()
 
-        with Image.open("./data/image.jpg") as im:
-            draw = ImageDraw.Draw(im)
-            draw.line((0, 0) + im.size, fill=128)
-            draw.line((0, im.size[1], im.size[0], 0), fill=128)
-
-            for i in objects:
-                shape = [(i.rectangle.x, i.rectangle.y), (i.rectangle.x + i.rectangle.w, i.rectangle.y + i.rectangle.h)]
-                draw.rectangle(shape, outline='red', width=5)
-                draw.text((i.rectangle.x, i.rectangle.y), text=i.object, font=ImageFont.truetype('arial.ttf', 50))
-
-            im.show()
-    except Exception as e:
-        print("[Errno {0}] {1}".format(e.errno, e.strerror))
+    pygame.quit()
 
 if __name__ == '__main__':
     main()
